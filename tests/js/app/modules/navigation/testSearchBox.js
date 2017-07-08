@@ -54,7 +54,7 @@ describe('Navigation.SearchBox', function () {
         let win = new Gtk.OffscreenWindow();
         win.add(box);
         win.show_all();
-        expect(box.is_focus).toBe(true);
+        expect(box.is_focus()).toBeTruthy();
     });
 
     it('dispatches search-text-entered when text is activated', function () {
