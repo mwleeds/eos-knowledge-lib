@@ -38,6 +38,9 @@ function add_custom_model_constructors (model) {
         marshal_property(props, 'authors', function (v) {
             return new GLib.Variant('as', v);
         });
+        marshal_property(props, 'content-dates', function (v) {
+            return new GLib.Variant('as', v);
+        });
         marshal_property(props, 'outgoing-links', function (v) {
             return new GLib.Variant('as', v);
         });
