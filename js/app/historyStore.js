@@ -97,6 +97,19 @@ const HistoryStore = new Lang.Class({
                     this.go_forward();
                     break;
                 case Actions.ITEM_CLICKED:
+                    printerr("ITEM_CLICKED");
+                    if (this.can_go_back()) {
+                        let last_content = this.get_previous_item();
+                        if (last_content.page_type == Pages.ARTICLE)
+                            Utils.record_content_access_metric(false,
+                                                               last_content.model.ekn_id,
+                                                               last_content.model.title,
+                                                               last_content.model.content_type);
+                    }
+                    Utils.record_content_access_metric(true,
+                                                       payload.model.ekn_id,
+                                                       payload.model.title,
+                                                       payload.model.content_type);
                     ReadingHistoryModel.get_default().mark_article_read(payload.model.ekn_id);
                     break;
             }
@@ -148,6 +161,10 @@ const HistoryStore = new Lang.Class({
 
     get_current_item: function () {
         return this.get_items()[this.get_current_index()] || null;
+    },
+
+    get_previous_item: function () {
+        return this.get_items()[this.get_current_index() - 1] || null;
     },
 
     can_go_back: function () {
@@ -260,21 +277,37 @@ const HistoryStore = new Lang.Class({
     // the same after a link click, factoring out this common function. When we
     // diverge in future interactions we should revisit this decomposition.
     show_ekn_id: function (ekn_id) {
+        printerr("show_ekn_id");
+        let old_item = this.get_current_item();
+
         Eknc.Engine.get_default().get_object_promise(ekn_id)
         .then((model) => {
+            if (!(model instanceof Eknc.MediaObjectModel) &&
+                old_item && old_item.page_type == Pages.ARTICLE) {
+                Utils.record_content_access_metric(false,
+                                                   old_item.model.ekn_id,
+                                                   old_item.model.title,
+                                                   old_item.model.content_type);
+            }
             if (model instanceof Eknc.ArticleObjectModel) {
+                printerr("Eknc.ArticleObjectModel");
                 this.set_current_item_from_props({
                     page_type: Pages.ARTICLE,
                     model: model,
                 });
+                Utils.record_content_access_metric(true,
+                                                   model.ekn_id,
+                                                   model.title,
+                                                   model.content_type);
             } else if (model instanceof Eknc.SetObjectModel) {
+                printerr("Eknc.SetObjectModel");
                 this.set_current_item_from_props({
                     page_type: Pages.SET,
                     model: model,
                     context_label: model.title,
                 });
             } else if (model instanceof Eknc.MediaObjectModel) {
-                let old_item = this.get_current_item();
+                printerr("Eknc.MediaObjectModel");
                 this.set_current_item_from_props({
                     page_type: old_item.page_type,
                     model: old_item.model,
@@ -289,6 +322,14 @@ const HistoryStore = new Lang.Class({
     },
 
     load_dbus_item: function (ekn_id, query, timestamp) {
+        printerr("load_dbus_item");
+        let old_item = this.get_current_item();
+        if (old_item && old_item.page_type == Pages.ARTICLE)
+            Utils.record_content_access_metric(false,
+                                               old_item.model.ekn_id,
+                                               old_item.model.title,
+                                               old_item.model.content_type);
+
         Eknc.Engine.get_default().get_object_promise(ekn_id)
         .then((model) => {
             if (model instanceof Eknc.ArticleObjectModel) {
@@ -298,6 +339,10 @@ const HistoryStore = new Lang.Class({
                     query: query,
                     timestamp: timestamp || Gdk.CURRENT_TIME,
                 });
+                Utils.record_content_access_metric(true,
+                                                   model.ekn_id,
+                                                   model.title,
+                                                   model.content_type);
             } else if (model instanceof Eknc.SetObjectModel) {
                 this.set_current_item_from_props({
                     page_type: Pages.SET,
